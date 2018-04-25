@@ -1,6 +1,6 @@
 open declarations
 
-//レスポンスを格納
+//store response
 run test_store{
 	#HTTPClient = 1
 	#HTTPServer = 1
