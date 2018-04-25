@@ -11,7 +11,7 @@ run test_store{
 	some CacheState.dif.store
 } for 2
 
-//2つのレスポンスを同時に格納
+//store two responses at the same time
 run test_store2{
 	#NetworkEndpoint = 2
 	#HTTPClient = 1
