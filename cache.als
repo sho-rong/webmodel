@@ -23,7 +23,7 @@ run test_store2{
 	some cs:CacheState | #(cs.dif.store) = 2
 } for 4
 
-//再利用を観測
+//test reusing
 run test_reuse{
 	#HTTPClient = 1
 	#HTTPServer = 1
@@ -34,7 +34,7 @@ run test_reuse{
 	#CacheReuse = 1
 } for 4
 
-//検証を観測
+//test verification
 run test_verification{
 	#HTTPClient = 1
 	#HTTPServer = 1
@@ -45,23 +45,23 @@ run test_verification{
 	some str:StateTransaction | checkVerification[str]
 } for 6
 
-//"private"オプションの効果を確認
-//No instance found で正常
+//check "private" option
+//It works when "No instance found" 
 run checkPrivateOption{
 	all c:Cache | c in PublicCache
 	some CacheState.dif.store
 	all res:HTTPResponse | one op:Private | op in res.headers.options
 }
 
-//"no-store"オプションの効果を確認
-//No instance found で正常
+//check "no-store" option
+//It works when "No instance found" 
 run checkNoStoreOption{
 	some CacheState.dif.store
 	all res:HTTPResponse | one op:NoStore | op in res.headers.options
 }
 
-//"no-cache"オプションの効果を確認
-//No instance found で正常
+//check "no-cache" option 
+//It works when "No instance found" 
 run checkNoCacheOption{
 	some str:StateTransaction |
 	{
@@ -129,17 +129,17 @@ run Cross_origin_BCP{
 
 	one Uri
 
-	//キャッシュはブラウザに唯一存在
+	//cache exists only one in a browser
 	all c:Cache | c in Browser.cache
 
-	//端末の所有者を設定
-	all p:Principal |	//全てのユーザは一つの端末しか管理しない
+	//set principal, gadget owner
+	all p:Principal |	// every user controls only one gadget
 		one c:HTTPConformist |
 			c in p.(servers + httpClients)
-	all b:Browser | b in Alice.httpClients	//全てのBrowserはAliceに管理される
-	all s:HTTPServer | s in Alice.servers	//全てのServerはAliceに管理される
+	all b:Browser | b in Alice.httpClients	//Srowser is Client of Alice
+	all s:HTTPServer | s in Alice.servers	//Server is Server of Alice 
 
-	//中継者の動作
+	//MITM's action
 	all tr:HTTPTransaction |{
 		tr.request.to in HTTPIntermediary implies{
 			one tr':HTTPTransaction |{
@@ -188,7 +188,7 @@ run Cross_origin_BCP{
 		all tr:HTTPTransaction | (one tr.response implies tr5.request.current in tr.response.current.*next)
 	}
 
-	//攻撃者によるbodyの改ざん
+	//HTTPbody tampered by Attacker
 	all tr,tr':HTTPTransaction |{
 		{
 			tr.request.from in HTTPClient
@@ -202,7 +202,7 @@ run Cross_origin_BCP{
 } for 10
 
 //Cross-origin BCP Attack (prepare)
-//ブラウザキャッシュへの汚染まで
+//A process to browser cache poisoning
 run Cross_origin_BCP_prepare{
 	#HTTPRequest = 4
 	#HTTPResponse = 4
@@ -217,17 +217,17 @@ run Cross_origin_BCP_prepare{
 
 	one Uri
 
-	//キャッシュはブラウザに唯一存在
+	//cache exists in browser
 	all c:Cache | c in Browser.cache
 
-	//端末の所有者を設定
-	all p:Principal |	//全てのユーザは一つの端末しか管理しない
+	//set the owner of gadget
+	all p:Principal |	//every user controls only one gadget
 		one c:HTTPConformist |
 			c in p.(servers + httpClients)
-	all b:Browser | b in Alice.httpClients	//全てのBrowserはAliceに管理される
-	all s:HTTPServer | s in Alice.servers	//全てのServerはAliceに管理される
+	all b:Browser | b in Alice.httpClients	//browser is a client of Alice
+	all s:HTTPServer | s in Alice.servers	//Server is a server of Alice
 
-	//通信イベントを作成
+	//Communication Event
 	some disj tr1,tr2,tr3,tr4:HTTPTransaction |{
 		//tr1 client <-> proxy(Attacker)
 		tr1.request.from in HTTPClient
@@ -246,21 +246,21 @@ run Cross_origin_BCP_prepare{
 		tr4.request.to in HTTPServer
 		tr4.request.to != tr2.request.to
 
-		//トランザクションの発生順序
+		//Order of Transactions
 		tr2.request.current in tr1.request.current.*next
 		tr1.response.current in tr2.response.current.*next
 		tr3.request.current in tr1.response.current.*next
 		tr4.request.current in tr3.request.current.*next
 		tr3.response.current in tr4.response.current.*next
 
-		//Attackerによるレスポンス改変
+		//tampered HTTPresponse by Attacker
 		tr1.response.body != tr2.response.body
 		tr3.response.body != tr4.response.body
 
-		//リクエストの誘発
+		//tr1 causes tr3
 		tr3.cause = tr1
 
-		//ブラウザキャッシュのレスポンス格納
+		//store response in browser cache
 		no tr2.afterState.dif.store
 		one tr4.afterState.dif.store
 	}
@@ -284,7 +284,7 @@ run CSRF{
 	all b:Browser | b in Alice.httpClients
 
 	one tr1,tr2:HTTPTransaction|{
-		//トランザクションの発生順序
+		//Order of transactions
 		tr2.request.current in tr1.response.current.*next
 
 		//tr1 client <-> server1(Attacker's)
@@ -292,7 +292,7 @@ run CSRF{
 		tr1.request.to !in Alice.servers
 		tr2.request.to in Alice.servers
 
-		//tr1によってtr2が発生
+		//tr1 causes r2
 		tr2.cause = tr1
 
 		tr1.request.uri != tr2.request.uri
@@ -346,7 +346,7 @@ run test_intermediary{
 	#HTTPServer = 1
 	#HTTPIntermediary = 1
 
-	//中継者の所有者はAliceである
+	//internediary is owned by Alice
 	all i:HTTPIntermediary | i in Alice.servers
 
 	one req:HTTPRequest | req.to in HTTPIntermediary
